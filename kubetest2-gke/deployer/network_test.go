@@ -29,7 +29,8 @@ func TestPrivateClusterArgs(t *testing.T) {
 		network        string
 		accessLevel    string
 		masterIPRanges []string
-		clusterInfo    cluster
+		clusterInfo    Cluster
+		autopilot      bool
 		expected       []string
 	}{
 		{
@@ -56,7 +57,7 @@ func TestPrivateClusterArgs(t *testing.T) {
 			network:        "test-network1",
 			accessLevel:    string(no),
 			masterIPRanges: []string{"172.16.0.32/28"},
-			clusterInfo:    cluster{index: 0, name: "cluster1"},
+			clusterInfo:    Cluster{Index: 0, Name: "cluster1"},
 			expected: []string{
 				"--enable-ip-alias",
 				"--enable-private-nodes",
@@ -74,7 +75,7 @@ func TestPrivateClusterArgs(t *testing.T) {
 			network:        "test-network2",
 			accessLevel:    string(limited),
 			masterIPRanges: []string{"173.16.0.32/28"},
-			clusterInfo:    cluster{index: 0, name: "cluster2"},
+			clusterInfo:    Cluster{Index: 0, Name: "cluster2"},
 			expected: []string{
 				"--enable-ip-alias",
 				"--enable-private-nodes",
@@ -91,7 +92,7 @@ func TestPrivateClusterArgs(t *testing.T) {
 			network:        "test-network3",
 			accessLevel:    string(unrestricted),
 			masterIPRanges: []string{"173.16.0.32/28", "175.16.0.32/22"},
-			clusterInfo:    cluster{index: 1, name: "cluster3"},
+			clusterInfo:    Cluster{Index: 1, Name: "cluster3"},
 			expected: []string{
 				"--enable-ip-alias",
 				"--enable-private-nodes",
@@ -108,7 +109,7 @@ func TestPrivateClusterArgs(t *testing.T) {
 			network:        "test-network4",
 			accessLevel:    string(unrestricted),
 			masterIPRanges: []string{"173.16.0.32/28", "175.16.0.32/22"},
-			clusterInfo:    cluster{index: 1, name: "cluster3"},
+			clusterInfo:    Cluster{Index: 1, Name: "cluster3"},
 			expected: []string{
 				"--enable-ip-alias",
 				"--enable-private-nodes",
@@ -118,6 +119,23 @@ func TestPrivateClusterArgs(t *testing.T) {
 				"--no-enable-master-authorized-networks",
 			},
 		},
+<<<<<<< HEAD
+=======
+		{
+			desc:           "multiple flags are not needed for GKE Autopilot private clusters",
+			projects:       []string{"project1"},
+			network:        "test-network5",
+			accessLevel:    string(unrestricted),
+			masterIPRanges: []string{"173.16.0.32/28", "175.16.0.32/22"},
+			clusterInfo:    Cluster{Index: 0, Name: "cluster1"},
+			autopilot:      true,
+			expected: []string{
+				"--enable-private-nodes",
+				"--create-subnetwork=name=test-network5-cluster1",
+				"--no-enable-master-authorized-networks",
+			},
+		},
+>>>>>>> 6dcbe74 (Some updates and fixes to the kubetest2 gke deployer)
 	}
 
 	for _, tc := range testCases {

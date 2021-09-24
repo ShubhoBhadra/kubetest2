@@ -115,10 +115,10 @@ func (d *Deployer) CreateSubnets() error {
 		subnetName := d.Network + "-" + serviceProject
 		if err := runWithOutput(exec.Command("gcloud", "compute", "networks", "subnets", "create",
 			subnetName,
-			"--project="+hostProject,
-			"--region="+regionFromLocation(d.Regions, d.Zones, d.retryCount),
-			"--network="+d.Network,
-			"--range="+parts[0],
+			"--project=" + hostProject,
+			"--region=" + RegionFromLocation(d.Regions, d.Zones, d.retryCount),
+			"--network=" + d.Network,
+			"--range=" + parts[0],
 			"--secondary-range",
 			fmt.Sprintf("%s-services=%s,%s-pods=%s", subnetName, parts[1], subnetName, parts[2]),
 		)); err != nil {
@@ -139,7 +139,7 @@ func (d *Deployer) DeleteSubnets(retryCount int) error {
 			if err := runWithOutput(exec.Command("gcloud", "compute", "networks", "subnets", "delete",
 				subnetName,
 				"--project="+hostProject,
-				"--region="+regionFromLocation(d.Regions, d.Zones, retryCount),
+				"--region="+RegionFromLocation(d.Regions, d.Zones, retryCount),
 				"--quiet",
 			)); err != nil {
 				return err
@@ -175,7 +175,7 @@ func transformNetworkName(projects []string, network string) string {
 
 // Returns the sub network args needed for the cluster creation command.
 // Reference: https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-shared-vpc#creating_a_cluster_in_your_first_service_project
-func subNetworkArgs(autopilot bool, projects []string, region, network string, projectIndex int) []string {
+func SubNetworkArgs(autopilot bool, projects []string, region, network string, projectIndex int) []string {
 	// No sub network args need to be added for creating clusters in the host project.
 	if projectIndex == 0 {
 		return []string{}
@@ -194,11 +194,12 @@ func subNetworkArgs(autopilot bool, projects []string, region, network string, p
 	if !autopilot {
 		args = append(args, "--enable-ip-alias")
 	}
+
 	return args
 }
 
 func (d *Deployer) SetupNetwork() error {
-	if err := enableSharedVPCAndGrantRoles(d.Projects, regionFromLocation(d.Regions, d.Zones, d.retryCount), d.Network); err != nil {
+	if err := enableSharedVPCAndGrantRoles(d.Projects, RegionFromLocation(d.Regions, d.Zones, d.retryCount), d.Network); err != nil {
 		return err
 	}
 	if err := grantHostServiceAgentUserRole(d.Projects); err != nil {
@@ -296,7 +297,8 @@ func grantHostServiceAgentUserRole(projects []string) error {
 		gkeServiceAccount := fmt.Sprintf("service-%s@container-engine-robot.iam.gserviceaccount.com", serviceProjectNum)
 		if err = runWithOutput(exec.Command("gcloud", "projects", "add-iam-policy-binding", hostProject,
 			"--member=serviceAccount:"+gkeServiceAccount,
-			"--role=roles/container.hostServiceAgentUser")); err != nil {
+			"--role=roles/container.hostServiceAgentUser",
+			"--condition=None")); err != nil {
 			return err
 		}
 	}
@@ -372,23 +374,23 @@ func removeHostServiceAgentUserRole(projects []string) error {
 
 // This function returns the args required for creating a private cluster.
 // Reference: https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#top_of_page
-func privateClusterArgs(projects []string, network, accessLevel string, masterIPRanges []string, clusterInfo cluster) []string {
-	if accessLevel == "" {
-		return []string{}
-	}
-
+func getPrivateClusterArgs(projects []string, network, accessLevel string, masterIPRanges []string, clusterInfo Cluster, autopilot bool) []string {
 	common := []string{
-		"--enable-ip-alias",
 		"--enable-private-nodes",
-		"--no-enable-basic-auth",
-		"--master-ipv4-cidr=" + masterIPRanges[clusterInfo.index],
-		"--no-issue-client-certificate",
+	}
+	// GKE in Autopilot mode does not support certain flags - https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters
+	if !autopilot {
+		common = append(common,
+			"--enable-ip-alias",
+			"--no-enable-basic-auth",
+			"--master-ipv4-cidr="+masterIPRanges[clusterInfo.Index],
+			"--no-issue-client-certificate")
 	}
 
 	// For multi-project profile, it'll be using the shared vpc, which creates subnets before cluster creation.
 	// So only create subnetworks if it's single-project profile.
 	if len(projects) == 1 {
-		subnetName := network + "-" + clusterInfo.name
+		subnetName := network + "-" + clusterInfo.Name
 		common = append(common, "--create-subnetwork=name="+subnetName)
 	}
 
