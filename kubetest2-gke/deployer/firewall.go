@@ -59,7 +59,7 @@ func ensureFirewallRulesForSingleProject(project, network string, clusters []clu
 			"--project="+project,
 			"--filter=metadata.created-by:*"+instanceGroups[project][clusterName][0].path,
 			"--limit=1",
-			"--format=get(tags.items)"))
+			"--format=get[delimiter=','](tags.items)"))		//added to seperate the tag with ",".
 		if err != nil {
 			return fmt.Errorf("instances list failed: %s", execError(err))
 		}
